@@ -219,19 +219,3 @@ func (p *ETLPipeline) Run() error {
 func (p *ETLPipeline) Close() error {
 	return p.db.Close()
 }
-
-// functions for testing
-
-// CountVehicles returns the total number of records in the vehicles table.
-func (p *ETLPipeline) CountVehicles() (int, error) {
-	var count int
-	err := p.db.QueryRow("SELECT COUNT(*) FROM vehicles").Scan(&count)
-	return count, err
-}
-
-// GetVehicleSpeed returns the speed of a vehicle by its ID.
-func (p *ETLPipeline) GetVehicleSpeed(id string) (float64, error) {
-	var speed float64
-	err := p.db.QueryRow("SELECT speed FROM vehicles WHERE id = ?", id).Scan(&speed)
-	return speed, err
-}

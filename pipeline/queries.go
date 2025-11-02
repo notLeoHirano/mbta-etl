@@ -175,3 +175,103 @@ func (p *ETLPipeline) queryVehicles(query string) ([]VehicleRecord, error) {
 
 	return records, rows.Err()
 }
+
+func (p *ETLPipeline) GetVehiclesByBearing(target float64, delta float64) ([]VehicleRecord, error) {
+    minBearing := target - delta
+    maxBearing := target + delta
+
+    query := `
+        SELECT id, label, latitude, longitude, speed, direction_id, current_status, occupancy_status, bearing, updated_at, ingested_at
+        FROM vehicles
+        WHERE bearing BETWEEN ? AND ?
+    `
+
+    rows, err := p.db.Query(query, minBearing, maxBearing)
+    if err != nil {
+        return nil, fmt.Errorf("failed to query vehicles by bearing: %w", err)
+    }
+    defer rows.Close()
+
+    var results []VehicleRecord
+    for rows.Next() {
+        var v VehicleRecord
+        if err := rows.Scan(
+            &v.ID, &v.Label, &v.Latitude, &v.Longitude, &v.Speed,
+            &v.DirectionID, &v.CurrentStatus, &v.OccupancyStatus,
+            &v.Bearing, &v.UpdatedAt, &v.IngestedAt,
+        ); err != nil {
+            return nil, err
+        }
+        results = append(results, v)
+    }
+
+    return results, nil
+}
+
+func (p *ETLPipeline) GetBearingSummary() (map[string]int, error) {
+    // Cardinal directions with approximate ranges
+    directions := map[string][2]float64{
+        "North":     {337.5, 22.5},  // Wraps around 0
+        "Northeast": {22.5, 67.5},
+        "East":      {67.5, 112.5},
+        "Southeast": {112.5, 157.5},
+        "South":     {157.5, 202.5},
+        "Southwest": {202.5, 247.5},
+        "West":      {247.5, 292.5},
+        "Northwest": {292.5, 337.5},
+    }
+
+    summary := make(map[string]int)
+
+    // Initialize counts
+    for dir := range directions {
+        summary[dir] = 0
+    }
+
+    rows, err := p.db.Query("SELECT bearing FROM vehicles")
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    for rows.Next() {
+        var bearing int
+        if err := rows.Scan(&bearing); err != nil {
+            return nil, err
+        }
+
+        // Determine which cardinal direction it belongs to
+        found := false
+        for dir, r := range directions {
+            min, max := r[0], r[1]
+            if dir == "North" && (float64(bearing) >= min || float64(bearing) < max) {
+                summary[dir]++
+                found = true
+                break
+            } else if dir != "North" && float64(bearing) >= min && float64(bearing) < max {
+                summary[dir]++
+                found = true
+                break
+            }
+        }
+        if !found {
+            summary["North"]++ // fallback if bearing is exactly 360
+        }
+    }
+
+    return summary, nil
+}
+
+// CountVehicles returns the total number of records in the vehicles table.
+func (p *ETLPipeline) CountVehicles() (int, error) {
+	var count int
+	err := p.db.QueryRow("SELECT COUNT(*) FROM vehicles").Scan(&count)
+	return count, err
+}
+
+// GetVehicleSpeed returns the speed of a vehicle by its ID.
+func (p *ETLPipeline) GetVehicleSpeed(id string) (float64, error) {
+	var speed float64
+	err := p.db.QueryRow("SELECT speed FROM vehicles WHERE id = ?", id).Scan(&speed)
+	return speed, err
+}
