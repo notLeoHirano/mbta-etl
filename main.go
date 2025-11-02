@@ -6,47 +6,25 @@ import (
 	"log"
 	"os"
 
-	"github.com/notLeoHirano/mbta-etl/etl"
-	api "github.com/notLeoHirano/mbta-etl/mbta"
-	"github.com/notLeoHirano/mbta-etl/transformer"
-	"github.com/notLeoHirano/mbta-etl/vehiclestore"
+	"github.com/notLeoHirano/mbta-etl/pipeline"
+	_ "modernc.org/sqlite"
 )
 
-// initDependencies sets up all components of the pipeline.
-func initDependencies(apiURL, dbPath string) (*etl.Pipeline, vehiclestore.Repository, error) {
-	// VehicleStore (L and Q)
-	repo, err := vehiclestore.NewVehicleStore(dbPath) // Correctly uses NewVehicleStore
-	if err != nil {
-		return nil, nil, fmt.Errorf("dependency setup failed (vehiclestore): %w", err)
-	}
-
-	// API Client (E)
-	apiClient := api.NewMBTAClient(apiURL)
-
-	// Transformer (T)
-	xformer := transformer.NewVehicleTransformer()
-
-	// Pipeline (Orchestration)
-	pipeline := etl.NewPipeline(apiClient, xformer, repo)
-
-	return pipeline, repo, nil
-}
 
 func main() {
 	// CLI flags
-	runETL := flag.Bool("run", false, "Run the ETL pipeline once")
-	query := flag.String("query", "", "Query to run (top10, routes, stats)")
+	runETL := flag.Bool("run", false, "Run the ETL pipeline")
+	query := flag.String("query", "", "Query to run (top10, stats)")
 	dbPath := flag.String("db", "mbta_vehicles.db", "Database path")
 	apiURL := flag.String("api", "https://api-v3.mbta.com/vehicles", "MBTA API URL")
 
 	flag.Parse()
 
-	// Setup dependencies
-	pipeline, repo, err := initDependencies(*apiURL, *dbPath)
+	pipeline, err := pipeline.NewETLPipeline(*apiURL, *dbPath)
 	if err != nil {
-		log.Fatalf("Initialization error: %v", err)
+		log.Fatalf("Failed to initialize pipeline: %v", err)
 	}
-	defer repo.Close() // Ensure the database connection is closed
+	defer pipeline.Close()
 
 	if *runETL {
 		if err := pipeline.Run(); err != nil {
@@ -56,27 +34,28 @@ func main() {
 		return
 	}
 
-	// Handle Query execution
 	switch *query {
 	case "top10":
-		vehicles, err := repo.GetTop10FastestVehicles()
+		vehicles, err := pipeline.GetTop10FastestVehicles()
 		if err != nil {
 			log.Fatalf("Query failed: %v", err)
 		}
 		
-		fmt.Println("\nTop 10 Fastest Vehicles")
+		fmt.Println("\n=== Top 10 Fastest Vehicles ===")
 		for i, v := range vehicles {
-			fmt.Printf("%d. Vehicle %s (Label: %s) - Speed: %.2f mph, Status: %s (Last seen: %v)\n",
-				i+1, v.ID, v.Label, v.Speed, v.CurrentStatus, v.UpdatedAt.Format("2006-01-02 15:04:05"))
+			fmt.Printf("%d. Vehicle %s (Label: %s) - Speed: %.2f mph, Status: %s\n",
+				i+1, v.ID, v.Label, v.Speed, v.CurrentStatus)
 		}
 
 	case "routes":
-		routes, err := repo.GetRouteBreakdown()
+		routes, err := pipeline.GetRouteBreakdown()
 		if err != nil {
 			log.Fatalf("Query failed: %v", err)
 		}
 		
-		fmt.Println("\nMBTA ROUTE BREAKDOWN")
+		fmt.Println("\n╔═══════════════════════════════════════════════════════╗")
+		fmt.Println("║              MBTA ROUTE BREAKDOWN                     ║")
+		fmt.Println("╚═══════════════════════════════════════════════════════╝")
 		fmt.Println()
 		fmt.Printf("%-20s %10s %15s %15s\n", "Route Type", "Count", "Avg Speed", "Max Speed")
 		fmt.Println("─────────────────────────────────────────────────────────────")
@@ -88,12 +67,14 @@ func main() {
 		fmt.Println()
 
 	case "stats":
-		stats, err := repo.GetSummaryStats()
+		stats, err := pipeline.GetSummaryStats()
 		if err != nil {
 			log.Fatalf("Query failed: %v", err)
 		}
 		
-		fmt.Println("\nMBTA VEHICLE SUMMARY STATISTICS")
+		fmt.Println("\n╔═══════════════════════════════════════════════════════╗")
+		fmt.Println("║          MBTA VEHICLE SUMMARY STATISTICS              ║")
+		fmt.Println("╚═══════════════════════════════════════════════════════╝")
 		
 		fmt.Println("\nFLEET OVERVIEW")
 		fmt.Printf("   Total Vehicles: %v\n", stats["total_vehicles"])
@@ -102,7 +83,10 @@ func main() {
 		
 		fmt.Println("\nSPEED METRICS")
 		fmt.Printf("   Average Speed: %v\n", stats["average_speed"])
+		fmt.Printf("   Median Speed: %v\n", stats["median_speed"])
 		fmt.Printf("   Max Speed: %v\n", stats["max_speed"])
+		fmt.Printf("   90th Percentile: %v\n", stats["speed_90th_percentile"])
+		fmt.Printf("   95th Percentile: %v\n", stats["speed_95th_percentile"])
 		
 		fmt.Println("\nVEHICLE STATUS")
 		fmt.Printf("   In Transit: %v\n", stats["in_transit"])
@@ -120,15 +104,11 @@ func main() {
 		fmt.Println()
 
 	default:
-		// Default help message
-		fmt.Println("MBTA Vehicle Data ETL & Analysis Tool")
-		fmt.Println("\nUsage:")
-		fmt.Println("  Run ETL:        go run . -run")
-		fmt.Println("  Query top 10:   go run . -query top10")
-		fmt.Println("  Query stats:    go run . -query stats")
-		fmt.Println("  Query routes:   go run . -query routes")
-		fmt.Println("\nOptional Flags:")
-		fmt.Println("  -db [path]: Specify database file path (default: mbta_vehicles.db)")
+		fmt.Println("Usage:")
+		fmt.Println("  Run ETL:        go run main.go -run")
+		fmt.Println("  Query top 10:   go run main.go -query top10")
+		fmt.Println("  Query stats:    go run main.go -query stats")
+		fmt.Println("  Query routes:   go run main.go -query routes")
 		os.Exit(1)
 	}
 }

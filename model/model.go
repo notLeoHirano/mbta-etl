@@ -1,6 +1,8 @@
 package model
 
-import "time"
+import (
+	"time"
+)
 
 // MBTA API Response structures
 type VehicleResponse struct {
@@ -14,20 +16,20 @@ type Vehicle struct {
 }
 
 type Attributes struct {
-	UpdatedAt           string  `json:"updated_at"`
-	Speed               *float64 `json:"speed"`
-	RevenueStatus       string  `json:"revenue_status"`
-	OccupancyStatus     string  `json:"occupancy_status"`
-	Longitude           float64 `json:"longitude"`
-	Latitude            float64 `json:"latitude"`
-	Label               string  `json:"label"`
-	DirectionID         int     `json:"direction_id"`
-	CurrentStopSequence *int     `json:"current_stop_sequence"`
-	CurrentStatus       string  `json:"current_status"`
-	Bearing             *int     `json:"bearing"`
+	UpdatedAt           string    `json:"updated_at"`
+	Speed               *float64  `json:"speed"`
+	RevenueStatus       string    `json:"revenue_status"`
+	OccupancyStatus     string    `json:"occupancy_status"`
+	Longitude           float64   `json:"longitude"`
+	Latitude            float64   `json:"latitude"`
+	Label               string    `json:"label"`
+	DirectionID         int       `json:"direction_id"`
+	CurrentStopSequence *int      `json:"current_stop_sequence"`
+	CurrentStatus       string    `json:"current_status"`
+	Bearing             *int      `json:"bearing"`
 }
 
-// VehicleRecord is the normalized struct to be stored in the db
+// Normalized database schema
 type VehicleRecord struct {
 	ID              string
 	Label           string
@@ -41,6 +43,3 @@ type VehicleRecord struct {
 	UpdatedAt       time.Time
 	IngestedAt      time.Time
 }
-
-// QueryStat is a generic map used for returning summary statistics.
-type QueryStat map[string]interface{}
