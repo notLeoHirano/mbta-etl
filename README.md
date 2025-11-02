@@ -1,6 +1,6 @@
 # MBTA Vehicles ETL Pipeline
 
-A simple ETL (Extract-Transform-Load) pipeline that ingests real-time vehicle data from the MBTA API and stores it in SQLite for querying and analysis.
+A simple ETL pipeline that ingests real-time vehicle data from the MBTA API and stores it in SQLite for querying and analysis.
 
 ## Features
 
@@ -31,18 +31,20 @@ The pipeline normalizes MBTA vehicle data into the following schema:
 
 ## Installation
 
+0. **Ensure you have a recent version of Go installed**
+
 1. **Clone the repository:**
 
    ```bash
-   git clone <repository-url>
-   cd mbta-etl-pipeline
+   git clone `https://github.com/notLeoHirano/mbta-etl.git`
+   cd mbta-etl
    ```
 
 2. **Install dependencies:**
 
    ```bash
    go mod init mbta-etl
-   go get github.com/mattn/go-sqlite3
+   go get modernc.org/sqlite
    go mod tidy
    ```
 
