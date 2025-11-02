@@ -87,7 +87,7 @@ go run main.go -query top10
 
 Output:
 
-```
+```bash
 Top 10 Fastest Vehicles
 1. Vehicle 1838 (Label: 1838) - Speed: 33.50 mph, Status: IN_TRANSIT_TO
 2. Vehicle 1713 (Label: 1713) - Speed: 28.20 mph, Status: IN_TRANSIT_TO
