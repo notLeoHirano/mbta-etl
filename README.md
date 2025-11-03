@@ -43,9 +43,7 @@ The pipeline normalizes MBTA vehicle data into the following schema:
 2. **Install dependencies:**
 
    ```bash
-   go mod init mbta-etl
-   go get modernc.org/sqlite
-   go mod tidy
+   go mod download
    ```
 
 ## Usage

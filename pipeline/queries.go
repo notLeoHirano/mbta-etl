@@ -4,7 +4,9 @@ import (
 	"fmt"
 )
 
-// Query functions
+// A collection of possible queries to explore the MBTA API
+
+// Top 10 fastest vehicles currently
 func (p *ETLPipeline) GetTop10FastestVehicles() ([]VehicleRecord, error) {
 	query := `
 		SELECT id, label, latitude, longitude, speed, direction_id, current_status, occupancy_status, bearing, updated_at, ingested_at
@@ -15,6 +17,8 @@ func (p *ETLPipeline) GetTop10FastestVehicles() ([]VehicleRecord, error) {
 	return p.queryVehicles(query)
 }
 
+
+// Breakdown by mbta route
 func (p *ETLPipeline) GetRouteBreakdown() ([]map[string]interface{}, error) {
 	// Extract route prefix from vehicle ID (e.g., "R-" for Red, "G-" for Green, "O-" for Orange)
 	query := `
@@ -64,6 +68,8 @@ func (p *ETLPipeline) GetRouteBreakdown() ([]map[string]interface{}, error) {
 	return results, rows.Err()
 }
 
+
+// overall summary
 func (p *ETLPipeline) GetSummaryStats() (map[string]interface{}, error) {
 	stats := make(map[string]interface{})
 
@@ -152,6 +158,9 @@ func (p *ETLPipeline) GetSummaryStats() (map[string]interface{}, error) {
 	return stats, nil
 }
 
+
+
+// gets all vehicles
 func (p *ETLPipeline) queryVehicles(query string) ([]VehicleRecord, error) {
 	rows, err := p.db.Query(query)
 	if err != nil {
@@ -176,6 +185,8 @@ func (p *ETLPipeline) queryVehicles(query string) ([]VehicleRecord, error) {
 	return records, rows.Err()
 }
 
+
+// GetVehiclesByBearing sees which vehicles are pointed within a cone of 2 * delta degrees 
 func (p *ETLPipeline) GetVehiclesByBearing(target float64, delta float64) ([]VehicleRecord, error) {
     minBearing := target - delta
     maxBearing := target + delta
@@ -208,6 +219,8 @@ func (p *ETLPipeline) GetVehiclesByBearing(target float64, delta float64) ([]Veh
     return results, nil
 }
 
+
+// GetBearingSummary returns summary of what direction each vehicle is pointing
 func (p *ETLPipeline) GetBearingSummary() (map[string]int, error) {
     // Cardinal directions with approximate ranges
     directions := map[string][2]float64{
@@ -262,12 +275,16 @@ func (p *ETLPipeline) GetBearingSummary() (map[string]int, error) {
     return summary, nil
 }
 
+
+
 // CountVehicles returns the total number of records in the vehicles table.
 func (p *ETLPipeline) CountVehicles() (int, error) {
 	var count int
 	err := p.db.QueryRow("SELECT COUNT(*) FROM vehicles").Scan(&count)
 	return count, err
 }
+
+
 
 // GetVehicleSpeed returns the speed of a vehicle by its ID.
 func (p *ETLPipeline) GetVehicleSpeed(id string) (float64, error) {
