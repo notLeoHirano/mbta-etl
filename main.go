@@ -15,7 +15,7 @@ func main() {
 	runETL := flag.Bool("run", false, "Run the ETL pipeline")
 	query := flag.String("query", "", "Query to run (top10, stats, routes, bearing, bearing_summary)")
 	dbPath := flag.String("db", "mbta_vehicles.db", "Database path")
-	apiURL := flag.String("api", "https://api-v3.mbta.com/vehicles", "MBTA API URL")
+	apiURL := flag.String("api", "https://api-v3.mbta.com/vehicles", "MBTA API URL") // default, but can be customized in CLI
 	bearing := flag.Float64("bearing", 0, "Target bearing for filtering vehicles")
 	delta := flag.Float64("delta", 10, "Degree range around bearing for filtering vehicles")
 
